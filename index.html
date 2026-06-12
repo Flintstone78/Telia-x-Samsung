@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Telia × Samsung — Nätjakten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --telia-purple:#990AE3;
+    --telia-deep:#29003E;
+    --telia-light:#F4E0FF;
+    --samsung:#1428A0;
+    --samsung-bright:#3b6dff;
+    --wall:#990AE3;
+    --wall-glow:rgba(153,10,227,.55);
+    --pellet:#F4E0FF;
+    --bg0:#1a0028;
+    --bg1:#29003E;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:'Sora',system-ui,sans-serif;
+    background:radial-gradient(120% 120% at 50% 0%,var(--bg1) 0%,var(--bg0) 70%,#0d0016 100%);
+    color:var(--telia-light);
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    min-height:100dvh;overflow:hidden;user-select:none;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .brandbar{
+    width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px 8px;letter-spacing:.5px;
+  }
+  .lockup{font-family:'Press Start 2P';font-size:11px;color:#fff;text-shadow:0 0 12px var(--wall-glow);}
+  .lockup .x{color:var(--telia-purple);margin:0 5px;}
+  .lockup .sg{color:var(--samsung-bright);}
+  .hud{
+    width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;
+    padding:2px 20px 10px;font-size:13px;font-weight:600;
+  }
+  .hud .label{font-family:'Press Start 2P';font-size:9px;opacity:.65;display:block;margin-bottom:5px;letter-spacing:0;}
+  .hud .val{font-family:'Press Start 2P';font-size:14px;color:#fff;}
+  .lives{display:flex;gap:6px;}
+  .life{width:14px;height:14px;border-radius:50%;background:var(--samsung-bright);box-shadow:0 0 8px var(--samsung-bright);}
+  .stage{position:relative;width:100%;max-width:520px;flex:0 0 auto;padding:0 12px;display:flex;justify-content:center;}
+  canvas{display:block;width:auto;height:auto;border-radius:14px;
+    box-shadow:0 0 0 1px rgba(153,10,227,.25),0 18px 60px -20px #000 inset, 0 12px 40px -16px rgba(153,10,227,.4);
+    background:#150022;}
+  /* on-screen controls */
+  .pad{width:100%;max-width:520px;display:flex;justify-content:center;padding:18px 0 8px;}
+  .dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);gap:8px;}
+  .dbtn{grid-column:auto;border:none;border-radius:14px;background:rgba(244,224,255,.07);
+    color:var(--telia-light);font-size:22px;display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(4px);border:1px solid rgba(244,224,255,.12);transition:transform .05s, background .12s;}
+  .dbtn:active{background:var(--telia-purple);color:#fff;transform:scale(.94);}
+  .up{grid-column:2;grid-row:1;} .left{grid-column:1;grid-row:2;}
+  .right{grid-column:3;grid-row:2;} .down{grid-column:2;grid-row:3;}
+  /* overlays */
+  .overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(120% 120% at 50% 0%,rgba(41,0,62,.92),rgba(13,0,22,.96));
+    backdrop-filter:blur(6px);padding:24px;text-align:center;z-index:20;}
+  .overlay.hidden{display:none;}
+  .title{font-family:'Press Start 2P';font-size:clamp(26px,8vw,40px);line-height:1.35;color:#fff;
+    text-shadow:0 0 22px var(--wall-glow);margin:0 0 6px;}
+  .title .small{display:block;font-size:10px;line-height:1.7;color:rgba(244,224,255,.7);margin-bottom:16px;letter-spacing:1px;}
+  .title .small .tl{color:var(--telia-purple);}
+  .title .small .sg{color:var(--samsung-bright);}
+  .tagline{font-size:15px;opacity:.8;max-width:340px;margin:0 0 26px;line-height:1.5;}
+  .field{width:min(320px,80vw);margin:0 auto 18px;}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:2px;opacity:.6;margin-bottom:8px;}
+  .field input{width:100%;padding:15px 16px;border-radius:12px;border:1px solid rgba(244,224,255,.18);
+    background:rgba(244,224,255,.06);color:#fff;font-family:'Sora';font-size:17px;text-align:center;outline:none;}
+  .field input:focus{border-color:var(--telia-purple);box-shadow:0 0 0 3px rgba(153,10,227,.25);}
+  .btn{font-family:'Press Start 2P';font-size:13px;padding:18px 30px;border:none;border-radius:14px;cursor:pointer;
+    background:linear-gradient(135deg,var(--telia-purple),var(--samsung));color:#fff;letter-spacing:1px;
+    box-shadow:0 10px 30px -8px rgba(153,10,227,.6);transition:transform .08s,filter .15s;}
+  .btn:active{transform:translateY(2px) scale(.98);}
+  .btn:disabled{filter:grayscale(.7) brightness(.6);cursor:not-allowed;}
+  .score-big{font-family:'Press Start 2P';font-size:clamp(34px,11vw,56px);color:#fff;margin:4px 0 2px;
+    text-shadow:0 0 26px var(--wall-glow);}
+  .endtitle{font-family:'Press Start 2P';font-size:clamp(14px,4.5vw,20px);color:#fff;margin-bottom:22px;
+    text-shadow:0 0 18px var(--wall-glow);line-height:1.5;}
+  .prize{margin-top:16px;font-size:13px;letter-spacing:1px;opacity:.6;}
+  .prize.won{font-family:'Press Start 2P';font-size:13px;color:#fff;opacity:1;padding:12px 18px;border-radius:12px;
+    background:linear-gradient(135deg,rgba(153,10,227,.35),rgba(20,40,160,.35));
+    border:1px solid rgba(244,224,255,.25);box-shadow:0 0 24px -6px var(--wall-glow);}
+  .score-label{font-size:12px;letter-spacing:3px;text-transform:uppercase;opacity:.6;}
+  .who{font-size:18px;font-weight:700;margin:18px 0 2px;color:var(--telia-light);}
+  .note{font-size:12px;opacity:.5;max-width:300px;margin:22px auto 0;line-height:1.6;}
+  .hint{font-size:12px;opacity:.55;margin-top:18px;}
+  @media (max-height:720px){ .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);} }
+</style>
+  <!-- Analytics: aktivera "Web Analytics" i Vercel-projektet. Sidvisningar spåras automatiskt.
+       Spelet skickar dessutom custom-events: spel_start och spel_slut (poäng, nivå, pris). -->
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+
+  <div class="brandbar">
+    <div class="lockup">TELIA<span class="x">×</span><span class="sg">SAMSUNG</span></div>
+    <div style="font-size:10px;opacity:.45;letter-spacing:1px;">NÄTJAKTEN</div>
+  </div>
+
+  <div class="hud">
+    <div><span class="label">Poäng</span><span class="val" id="hudScore">0</span></div>
+    <div style="text-align:center;"><span class="label">Liv</span><div class="lives" id="hudLives"></div></div>
+    <div style="text-align:right;"><span class="label">Nivå</span><span class="val" id="hudLevel">1</span></div>
+  </div>
+
+  <div class="stage">
+    <canvas id="game"></canvas>
+  </div>
+
+  <div class="pad">
+    <div class="dpad">
+      <button class="dbtn up"    data-dir="up">▲</button>
+      <button class="dbtn left"  data-dir="left">◀</button>
+      <button class="dbtn right" data-dir="right">▶</button>
+      <button class="dbtn down"  data-dir="down">▼</button>
+    </div>
+  </div>
+
+  <!-- START -->
+  <div class="overlay" id="menu">
+    <h1 class="title"><span class="small"><span class="tl">TELIA</span> × <span class="sg">SAMSUNG GALAXY FLIP &amp; FOLD 8</span></span>SPELA<br>OCH<br>VINN</h1>
+    <p class="tagline">Samla så många poäng du kan, undvik hindren och jaga highscore. Tar du dig över 2000 poäng har du chansen att vinna fina priser. Lycka till – och kör hårt.</p>
+    <div class="field">
+      <label for="name">Ditt namn</label>
+      <input id="name" maxlength="12" placeholder="Skriv här" autocomplete="off" inputmode="text">
+    </div>
+    <button class="btn" id="startBtn">STARTA ▸</button>
+    <p class="hint">Svep eller använd knapparna för att styra</p>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="gameover">
+    <div class="endtitle" id="endTitle">GAME OVER</div>
+    <div class="score-label">Slutpoäng</div>
+    <div class="score-big" id="finalScore">0</div>
+    <div class="who" id="finalName"></div>
+    <div class="prize" id="prize"></div>
+    <button class="btn" id="againBtn" style="margin-top:26px;">SPELA IGEN ▸</button>
+    <p class="note" id="endNote">Vann du ett pris? Visa upp din slutpoäng i en Telia-butik för att hämta ut det. Prisnivåer: 🥉 2000 · 🥈 3000 · 🥇 5000.</p>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- BANOR ----------
+  // '#'=vägg  '.'=pellet  'o'=power  'S'=spelarstart  'G'=jägarspawn
+  // Genererade + spelbarhetsverifierade (BFS: alla prickar nåbara från start)
+  const LEVELS = [
+  { name:'ÅTTAN', ghosts:2, pSpd:4.6, gSpd:3.3, fright:7000, raw:[
+      "#############",
+      "#############",
+      "##o...G...o##",
+      "##.........##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##....S....##",
+      "##.........##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##.........##",
+      "##o...G...o##",
+      "#############",
+      "#############"
+    ] },
+  { name:'G-BANAN', ghosts:3, pSpd:4.7, gSpd:3.7, fright:7000, raw:[
+      "#############",
+      "#############",
+      "##o...G...o##",
+      "##.........##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#########",
+      "##S.#########",
+      "##..##.....##",
+      "##..##.....##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#####G.##",
+      "##..#####..##",
+      "##..#####..##",
+      "##.........##",
+      "##o...G...o##",
+      "#############",
+      "#############"
+    ] },
+  { name:'PEBBLEN', ghosts:4, pSpd:4.8, gSpd:4.1, fright:6000, raw:[
+      "#############",
+      "#############",
+      "###o.....o###",
+      "###...G...###",
+      "##..##.##..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..#...#..##",
+      "##.........##",
+      "##....#....##",
+      "##....#....##",
+      "##.G..S....##",
+      "##....#....##",
+      "##....#....##",
+      "##..#...#..##",
+      "##..#...#..##",
+      "##..#####..##",
+      "##..#####..##",
+      "##..##.##..##",
+      "###...G...###",
+      "###o.....o###",
+      "#############",
+      "#############"
+    ] },
+  { name:'LABYRINTEN', ghosts:4, pSpd:4.9, gSpd:4.5, fright:5000, raw:[
+      "#############",
+      "#o..#G.G...o#",
+      "#.#.#.#.#.#.#",
+      "#...#.......#",
+      "#.###.#.#.#.#",
+      "#.......##..#",
+      "#.#.#.#.#.###",
+      "##..........#",
+      "#.#.###.#.#.#",
+      "#..#........#",
+      "#.#.#.#.###.#",
+      "#....G.G....#",
+      "#.#.#.#.#.#.#",
+      "#..........##",
+      "###.#.#.#.#.#",
+      "#......#..#.#",
+      "###.#.#.#.#.#",
+      "#....#......#",
+      "#.#.#.#.###.#",
+      "#...........#",
+      "#.#.#.#.#.#.#",
+      "#o....S....o#",
+      "#############"
+    ] },
+  { name:'FINALEN', ghosts:4, pSpd:5.0, gSpd:4.8, fright:4000, raw:[
+      "#############",
+      "#o...G.G#..o#",
+      "#.#.#.#.#.#.#",
+      "#..#........#",
+      "###.#.#.#.#.#",
+      "#........#..#",
+      "#####.#.#.###",
+      "#.#.........#",
+      "#.#.#.###.#.#",
+      "#....#....#.#",
+      "#.#.#####.###",
+      "#G.#.......G#",
+      "#.###.#.#.#.#",
+      "#.......#.#.#",
+      "#.#.#.#.#.###",
+      "#..#...#....#",
+      "#.#.#.#.###.#",
+      "#........#..#",
+      "#.#.#.#.###.#",
+      "##.....#..#.#",
+      "#.#.#.#.#.#.#",
+      "#o....S....o#",
+      "#############"
+    ] }
+  ];
+  const LEVEL_BONUS = 500;   // bonus för klarad bana
+
+  const TILE = 24;
+  let MAZE, COLS=1, ROWS=1, W=TILE, H=TILE;
+  let START, GHOST_SPAWNS=[], GHOST_HOME, REACH, CFG=LEVELS[0];
+
+  function loadLevel(n){
+    CFG = LEVELS[n-1];
+    const raw = CFG.raw;
+    COLS = Math.max(...raw.map(r=>r.length));
+    ROWS = raw.length;
+    MAZE = raw.map(r=>r.padEnd(COLS,'#').split(''));
+    GHOST_SPAWNS=[]; START=null;
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      if(MAZE[r][c]==='S'){ START={r,c}; MAZE[r][c]=' '; }
+      else if(MAZE[r][c]==='G'){ GHOST_SPAWNS.push({r,c}); MAZE[r][c]=' '; }
+    }
+    GHOST_HOME = GHOST_SPAWNS[Math.floor(GHOST_SPAWNS.length/2)] || START;
+    W = COLS*TILE; H = ROWS*TILE;
+    REACH = reachableFrom(START);
+    buildPellets();
+    fitCanvas();
+  }
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  function fitCanvas(){
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    // visa i CSS-px så hela banan får plats både i bredd och höjd
+    const stage = canvas.parentElement;
+    const availW = (stage.clientWidth||W) ;
+    const availH = Math.max(220, window.innerHeight*0.60);
+    const scale = Math.min(availW/W, availH/H);
+    canvas.style.width = Math.round(W*scale)+"px";
+    canvas.style.height = Math.round(H*scale)+"px";
+  }
+  fitCanvas();
+  window.addEventListener('resize', ()=>{ if(MAZE) fitCanvas(); });
+  window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ if(MAZE) fitCanvas(); },200); });
+
+  // ---------- SPRITES (Telia-pebble för power-pellets; spelaren ritas som linjer) ----------
+  const SVG_PEBBLE = `<svg xmlns="http://www.w3.org/2000/svg" width="190.756" height="199" viewBox="0 0 190.756 199"><g transform="translate(-19)"><g transform="translate(19)"><path d="M670.267,772.956c25.982-14.992,49.359-40.331,56.772-58.44,2.071-14.991,2.539-16.849,2.806-33.366,0-2.255-.133-4.444-.334-6.567-1.536,24.212-32.995,54.659-74.673,74.493-50.293,24.013-87.963,30.447-104.8,12.139a137.457,137.457,0,0,0,16.231,25.538C585.71,803.867,626.519,798.163,670.267,772.956Z" transform="translate(-539.089 -633.125)" fill="#990ae3"/><path d="M646.871,723.838c47.422-22.686,80.417-55.057,74.673-76.417C712.126,631.169,692.957,625,672.453,625,611.672,625,537,664.8,537,715.611a67.778,67.778,0,0,0,4.074,21.426C554.967,755.346,597.312,747.584,646.871,723.838Z" transform="translate(-537 -625)" fill="#990ae3"/><path d="M651.017,817.6c-33.328,13.4-52.43,9.154-62.984.8l-.134-.133c16.365,16.185,34.932,27.528,51.229,27.528,28.587,0,67.727-34.427,86.228-87.825C714.937,777.266,692.562,800.947,651.017,817.6Z" transform="translate(-545.154 -646.788)" fill="#990ae3"/></g></g></svg>`;
+  function svgImg(svg){ const i=new Image(); i.src='data:image/svg+xml,'+encodeURIComponent(svg); return i; }
+  const imgPebble = svgImg(SVG_PEBBLE);
+  let sprPower=null;
+  function fitInto(img,maxW,maxH){ const r=img.width/img.height; let w=maxW,h=maxW/r; if(h>maxH){h=maxH;w=maxH*r;} return {w,h}; }
+  function makeSprite(box,img,maxW,maxH,glow,blur){
+    const c=document.createElement('canvas'); c.width=box; c.height=box;
+    const x=c.getContext('2d'); const f=fitInto(img,maxW,maxH);
+    x.shadowColor=glow; x.shadowBlur=blur;
+    x.drawImage(img,(box-f.w)/2,(box-f.h)/2,f.w,f.h);
+    return c;
+  }
+  function buildSprites(){
+    if(imgPebble.complete && imgPebble.naturalWidth){
+      // power-pellets = Telia-pebble UTAN skugga
+      sprPower = makeSprite(Math.round(TILE*1.15), imgPebble, TILE*0.92, TILE*0.92, 'transparent', 0);
+    }
+  }
+  imgPebble.onload=buildSprites; buildSprites();
+
+  const isWall = (r,c)=> r<0||c<0||r>=ROWS||c>=COLS || MAZE[r][c]==='#';
+  const inBounds = (r,c)=> r>=0&&c>=0&&r<ROWS&&c<COLS;
+
+  // ---------- REACHABILITY + PELLETS ----------
+  function reachableFrom(start){
+    const seen = new Set(); const q=[start]; seen.add(start.r+","+start.c);
+    while(q.length){
+      const {r,c}=q.shift();
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
+        let nr=r+dr,nc=c+dc;
+        // tunnel-wrap horisontellt
+        if(nc<0) nc=COLS-1; if(nc>=COLS) nc=0;
+        if(!inBounds(nr,nc)) return;
+        const k=nr+","+nc;
+        if(!seen.has(k) && !isWall(nr,nc)){ seen.add(k); q.push({r:nr,c:nc}); }
+      });
+    }
+    return seen;
+  }
+
+  let pellets, powerPellets, totalPellets;
+  function buildPellets(){
+    pellets = new Set(); powerPellets = new Set();
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      if(!REACH.has(r+","+c)) continue;
+      const ch = MAZE[r][c];
+      if(ch==='.') pellets.add(r+","+c);
+      else if(ch==='o'){ pellets.add(r+","+c); powerPellets.add(r+","+c); }
+    }
+    totalPellets = pellets.size;
+  }
+
+  // ---------- STATE ----------
+  const DIRS = {up:{r:-1,c:0},down:{r:1,c:0},left:{r:0,c:-1},right:{r:0,c:1}};
+  let state='menu', score=0, lives=3, level=1, playerName='';
+  let player, ghosts=[], frightenedUntil=0, freezeUntil=0, flipPhase=0;
+
+  function tileCenter(r,c){ return {x:c*TILE+TILE/2, y:r*TILE+TILE/2}; }
+
+  function makeActor(r,c,speed){
+    const p=tileCenter(r,c);
+    return {r,c,x:p.x,y:p.y,dir:null,next:null,speed};
+  }
+
+  const GHOST_DEFS = [
+    {color:'#2ec4ff', chase:true},   // Telenor – ljusblå
+    {color:'#2e47d8', chase:true},   // Tele2 – mörkblå
+    {color:'#ff7a1a', chase:false},  // Tre – orange
+    {color:'#7cff4f', chase:true}    // Comviq – lime (4:e störningen)
+  ];
+  const corners = ()=>[{r:1,c:1},{r:1,c:COLS-2},{r:ROWS-2,c:1},{r:ROWS-2,c:COLS-2}];
+
+  function resetPositions(){
+    player = makeActor(START.r,START.c, CFG.pSpd);              // rutor/sekund
+    player.dir=null; player.next='left';
+    ghosts = GHOST_DEFS.slice(0,CFG.ghosts).map((d,i)=>{
+      const s = GHOST_SPAWNS[i%GHOST_SPAWNS.length];
+      const g = makeActor(s.r,s.c, CFG.gSpd);                   // alltid långsammare än spelaren
+      g.def=d; g.scatter=corners()[i%4];
+      g.eaten=false; g.dir='left'; g.releaseAt=performance.now()+i*650;
+      return g;
+    });
+    frightenedUntil=0;
+  }
+
+  // provider-oberoende spårning (no-op om ingen analytics laddad)
+  function track(name, props){
+    try{
+      if(window.plausible) window.plausible(name, props?{props}:undefined);
+      if(window.sa_event)  window.sa_event(name, props||{});
+      if(window.va)        window.va('event', Object.assign({name:name}, props||{}));
+      if(window.gtag)      window.gtag('event', name, props||{});
+    }catch(e){}
+  }
+
+  function startGame(){
+    score=0; lives=3; level=1;
+    loadLevel(1); resetPositions();
+    state='playing';
+    hide('menu'); hide('gameover');
+    updateHUD();
+    track('spel_start');
+    freezeUntil=performance.now()+1200;
+  }
+  function nextLevel(){
+    score += LEVEL_BONUS;
+    level++;
+    if(level>LEVELS.length){ gameOver(true); return; }
+    loadLevel(level); resetPositions();
+    freezeUntil=performance.now()+1200; updateHUD();
+  }
+  function loseLife(){
+    lives--; updateHUD();
+    if(lives<=0){ gameOver(false); return; }
+    resetPositions(); freezeUntil=performance.now()+900;
+  }
+  function prizeFor(s){
+    if(s>=5000) return '🥇 1:a pris — 5000+';
+    if(s>=3000) return '🥈 2:a pris — 3000+';
+    if(s>=2000) return '🥉 3:e pris — 2000+';
+    return null;
+  }
+  function gameOver(victory){
+    state='gameover';
+    const p = prizeFor(score), won = !!p;
+    document.getElementById('finalScore').textContent=score;
+    document.getElementById('finalName').textContent= playerName? '— '+playerName : '';
+    const endTitle=document.getElementById('endTitle');
+    const pz=document.getElementById('prize');
+    const note=document.getElementById('endNote');
+    if(won){
+      endTitle.textContent = victory? 'DU KLARADE ALLA 5 BANOR!' : 'GAME OVER';
+      pz.style.display=''; pz.textContent=p; pz.className='prize won';
+      note.textContent='Vann du ett pris? Visa upp din slutpoäng i en Telia-butik för att hämta ut det. Prisnivåer: 🥉 2000 · 🥈 3000 · 🥇 5000.';
+    } else {
+      endTitle.textContent = 'Bättre lycka nästa gång';
+      pz.style.display='none';
+      note.textContent='Ingen vinst den här gången. Men skam den som ger sig – kör en runda till!';
+    }
+    show('gameover'); saveLocal();
+    track('spel_slut', {poang:score, niva:level, pris: won? p : 'inget'});
+  }
+
+  function saveLocal(){
+    // v1: enbart lokalt (in-memory under sessionen). Här hade Supabase-anropet legat.
+    window.__lastScore = {name:playerName, score, level, at:Date.now()};
+  }
+
+  // ---------- INPUT ----------
+  function setDir(d){ if(state==='playing'&&player) player.next=d; }
+  document.addEventListener('keydown',e=>{
+    const tag=(e.target&&e.target.tagName)||'';
+    if(tag==='INPUT'||tag==='TEXTAREA') return;   // skriv fritt i namnfältet
+    if(state!=='playing') return;                 // styr bara under spel
+    const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
+    const dir=m[e.key]||m[(e.key||'').toLowerCase()];
+    if(dir){ e.preventDefault(); setDir(dir); }
+  });
+  document.querySelectorAll('.dbtn').forEach(b=>{
+    const fire=e=>{e.preventDefault(); setDir(b.dataset.dir);};
+    b.addEventListener('touchstart',fire,{passive:false});
+    b.addEventListener('mousedown',fire);
+  });
+  // swipe
+  let tsx=0,tsy=0;
+  canvas.addEventListener('touchstart',e=>{const t=e.touches[0];tsx=t.clientX;tsy=t.clientY;},{passive:true});
+  canvas.addEventListener('touchend',e=>{
+    const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy;
+    if(Math.abs(dx)<18&&Math.abs(dy)<18) return;
+    if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?'right':'left'); else setDir(dy>0?'down':'up');
+  },{passive:true});
+
+  // ---------- MOVEMENT ----------
+  function atCenter(a){ const ct=tileCenter(a.r,a.c); return Math.abs(a.x-ct.x)<0.5 && Math.abs(a.y-ct.y)<0.5; }
+  function canGo(r,c,dir){ const d=DIRS[dir]; let nr=r+d.r,nc=c+d.c;
+    if(nc<0)nc=COLS-1; if(nc>=COLS)nc=0; return !isWall(nr,nc); }
+
+  // Rutlåst rörelse: riktning byts BARA i rutcentrum -> skarpa svängar, jämn känsla.
+  // Hastighet i rutor/sekund, oberoende av bildfrekvens.
+  function step(a,dtMs){
+    let remaining = a.speed * TILE * (dtMs/1000);
+    let guard=0;
+    while(remaining>0 && guard++<16){
+      const ct = tileCenter(a.r,a.c);
+      const centered = Math.abs(a.x-ct.x)<0.5 && Math.abs(a.y-ct.y)<0.5;
+      if(centered){
+        a.x=ct.x; a.y=ct.y;
+        if(a.next && canGo(a.r,a.c,a.next)) a.dir=a.next;     // applicera köad sväng
+        if(!a.dir || !canGo(a.r,a.c,a.dir)){ a.dir=null; return; } // blockerad -> stanna
+      }
+      const d=DIRS[a.dir];
+      const targetX = ct.x + d.c*TILE, targetY = ct.y + d.r*TILE;
+      const need = Math.abs(targetX-a.x)+Math.abs(targetY-a.y);
+      if(remaining>=need){
+        remaining-=need; a.x=targetX; a.y=targetY;
+        let nr=a.r+d.r, nc=a.c+d.c;
+        if(nc<0){ nc=COLS-1; a.x=nc*TILE+TILE/2; }            // tunnel-wrap
+        else if(nc>=COLS){ nc=0; a.x=nc*TILE+TILE/2; }
+        a.r=nr; a.c=nc;
+      } else {
+        if(targetX!==a.x) a.x += Math.sign(targetX-a.x)*remaining;
+        if(targetY!==a.y) a.y += Math.sign(targetY-a.y)*remaining;
+        remaining=0;
+      }
+    }
+  }
+
+  function ghostThink(g){
+    if(!atCenter(g)) return;
+    g.x=g.c*TILE+TILE/2; g.y=g.r*TILE+TILE/2;
+    const opts=[];
+    for(const dir in DIRS){
+      if(!canGo(g.r,g.c,dir)) continue;
+      // undvik att vända 180° om inte återvändsgränd
+      const rev={up:'down',down:'up',left:'right',right:'left'}[g.dir];
+      if(dir===rev) continue;
+      opts.push(dir);
+    }
+    let choices = opts.length? opts : (canGo(g.r,g.c,g.dir)? [g.dir]:Object.keys(DIRS).filter(d=>canGo(g.r,g.c,d)));
+    if(!choices.length){ return; }
+
+    let target;
+    const fright = performance.now()<frightenedUntil && !g.eaten;
+    if(g.eaten) target=GHOST_HOME;
+    else if(fright) target=null; // fly = max avstånd
+    else if(g.def.chase) target={r:player.r,c:player.c};
+    else target=g.scatter;
+
+    if(target){
+      choices.sort((A,B)=>dist(g,A,target)-dist(g,B,target));
+      g.dir = (Math.random()<0.12 && choices.length>1)? choices[1] : choices[0];
+    } else {
+      // frightened: välj riktning bort från spelaren, lite slump
+      choices.sort((A,B)=>dist(g,B,player)-dist(g,A,player));
+      g.dir = Math.random()<0.4? choices[Math.floor(Math.random()*choices.length)] : choices[0];
+    }
+    if(g.eaten && g.r===GHOST_HOME.r && Math.abs(g.c-GHOST_HOME.c)<=2){ g.eaten=false; }
+  }
+  function dist(g,dir,t){ const d=DIRS[dir]; const r=g.r+d.r,c=g.c+d.c;
+    return (r-t.r)*(r-t.r)+(c-t.c)*(c-t.c); }
+
+  // ---------- COLLISION / EAT ----------
+  function eatCheck(){
+    const key=player.r+","+player.c;
+    if(pellets.has(key)){
+      pellets.delete(key);
+      if(powerPellets.has(key)){ powerPellets.delete(key); score+=50; frightenedUntil=performance.now()+CFG.fright;
+        blip(180,0.08);
+      } else { score+=10; blip(660,0.03); }
+      updateHUD();
+      if(pellets.size===0) nextLevel();
+    }
+    const fright=performance.now()<frightenedUntil;
+    ghosts.forEach(g=>{
+      const dx=g.x-player.x, dy=g.y-player.y;
+      if(dx*dx+dy*dy < (TILE*0.55)*(TILE*0.55)){
+        if(g.eaten) return;
+        if(fright){ g.eaten=true; score+=200; updateHUD(); blip(990,0.1); }
+        else loseLife();
+      }
+    });
+  }
+
+  // ---------- AUDIO (enkla genererade pip, ej kopierade ljud) ----------
+  let actx=null;
+  function audio(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return actx; }
+  function blip(freq,dur){ const a=audio(); if(!a) return;
+    const o=a.createOscillator(),g=a.createGain(); o.type='square'; o.frequency.value=freq;
+    g.gain.value=0.04; o.connect(g); g.connect(a.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.stop(a.currentTime+dur); }
+
+  // ---------- RENDER ----------
+  let lastT=0;
+  function loop(t){
+    const dt=Math.min(40, t-lastT||16); lastT=t;
+    if(state==='playing'){
+      const frozen = t<freezeUntil;
+      if(!frozen){
+        step(player,dt); if(player.dir) flipPhase+=dt; eatCheck();
+        ghosts.forEach(g=>{
+          if(t<g.releaseAt) return;
+          ghostThink(g);
+          const sp = g.eaten? g.speed*2.0 : (t<frightenedUntil? g.speed*0.6 : g.speed);
+          const saved=g.speed; g.speed=sp; step(g,dt); g.speed=saved;
+        });
+        eatCheck();
+      }
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // bakgrund
+    ctx.fillStyle='#150022'; ctx.fillRect(0,0,W,H);
+    // väggar
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      if(MAZE[r][c]==='#'){
+        const x=c*TILE,y=r*TILE;
+        ctx.fillStyle='rgba(153,10,227,0.16)'; ctx.fillRect(x+2,y+2,TILE-4,TILE-4);
+        ctx.strokeStyle='#990AE3'; ctx.lineWidth=2.2; ctx.shadowColor='rgba(153,10,227,.7)'; ctx.shadowBlur=8;
+        roundRect(x+2.5,y+2.5,TILE-5,TILE-5,5); ctx.stroke(); ctx.shadowBlur=0;
+      }
+    }
+    // pellets
+    // pellets = Telia-pebbles
+    const now=performance.now();
+    pellets.forEach(k=>{
+      const [r,c]=k.split(',').map(Number); const p=tileCenter(r,c);
+      if(powerPellets.has(k)){
+        if(sprPower){ const s=1+Math.sin(now/220)*0.13;
+          ctx.drawImage(sprPower, p.x-sprPower.width*s/2, p.y-sprPower.height*s/2, sprPower.width*s, sprPower.height*s);
+        } else { ctx.fillStyle='#fff'; ctx.shadowColor='#F4E0FF'; ctx.shadowBlur=12; circle(p.x,p.y,5); ctx.fill(); ctx.shadowBlur=0; }
+      } else {
+        ctx.fillStyle='#F4E0FF'; circle(p.x,p.y,2.6); ctx.fill();
+      }
+    });
+    // spelare = Galaxy-symbolen som tuggar
+    if(player) drawPlayer();
+    // gengångare
+    const fright=performance.now()<frightenedUntil;
+    ghosts.forEach(g=>{
+      const flash = fright && (frightenedUntil-performance.now()<2000) && (Math.floor(performance.now()/250)%2===0);
+      let col = g.eaten? 'rgba(244,224,255,.35)' : (fright? (flash?'#fff':'#c9b3ff') : g.def.color);
+      drawGhost(g.x,g.y,TILE*0.42,col,g.eaten, fright && !g.eaten);
+    });
+    // nivåbanner under "ready"-frysen
+    if(state==='playing' && performance.now()<freezeUntil){
+      ctx.save();
+      ctx.fillStyle='rgba(13,0,22,.72)'; ctx.fillRect(0,H/2-26,W,52);
+      ctx.fillStyle='#fff'; ctx.font="13px 'Press Start 2P'";
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.shadowColor='rgba(153,10,227,.8)'; ctx.shadowBlur=14;
+      ctx.fillText('NIVÅ '+level+' — '+CFG.name, W/2, H/2);
+      ctx.restore();
+    }
+  }
+  // Monster = "störning": taggig, darrande signalstörning (ej spöke)
+  function drawGhost(x,y,rad,col,eaten,fright){
+    const t=performance.now()/1000;
+    const N=9;
+    const spike = eaten?0.10 : (fright?0.14:0.36);    // taggighet
+    ctx.save();
+    if(!eaten){ ctx.shadowColor=col; ctx.shadowBlur=11; }
+    ctx.fillStyle=col; ctx.beginPath();
+    for(let i=0;i<=N*2;i++){
+      const a=Math.PI*i/N;
+      const outer = (i%2===0);
+      const jit = 1 + Math.sin(t*11 + i*1.9)*0.13;    // glitch-jitter
+      const rr = rad*(outer? jit : (1-spike));
+      const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr;
+      i===0? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // ljus kärna
+    ctx.fillStyle = eaten? 'rgba(244,224,255,.55)' : 'rgba(255,255,255,.92)';
+    circle(x,y,rad*0.20); ctx.fill();
+  }
+  function circle(x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); }
+  function roundRect(x,y,w,h,r){ ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  // Spelaren = Flip-telefon i profil: två halvor kring gångjärnet bildar ett "V"
+  // som öppnar/stänger sig (Pac-Mans munkil, fast byggd av telefonen).
+  function rr(x,y,w,h,r){ // rundad rekt-path
+    r=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  let lastFacing=Math.PI;  // börjar vänster
+  function drawPlayer(){
+    const period=560;                                          // ms per flip
+    const k = 0.5-0.5*Math.cos(flipPhase*2*Math.PI/period);    // 0..1
+    const half = (15 + k*48) * Math.PI/180;                    // halv öppningsvinkel
+    const face = {right:0,down:Math.PI/2,left:Math.PI,up:-Math.PI/2}[player.dir];
+    if(face!==undefined) lastFacing=face;
+    const L=TILE*0.74, T=TILE*0.34;
+    const body='#eef0f6', screen='#1428A0';
+    ctx.save();
+    ctx.translate(player.x,player.y);
+    ctx.rotate(lastFacing);
+    ctx.translate(-L*0.34,0);                                  // centrera kilen på rutan
+    // två telefonhalvor speglade kring framriktningen (öppningen pekar framåt)
+    for(const s of [-1,1]){
+      ctx.save(); ctx.rotate(s*half);
+      ctx.shadowColor='#3b6dff'; ctx.shadowBlur=9;
+      ctx.fillStyle=body; rr(0,-T/2, L, T, 5); ctx.fill();      // kropp
+      ctx.shadowBlur=0;
+      ctx.fillStyle=screen; rr(3,-T/2+2.5, L-7, T-5, 3); ctx.fill(); // skärm
+      ctx.fillStyle='rgba(255,255,255,.55)';                   // kameraprick
+      circle(L-4,0,1.4); ctx.fill();
+      ctx.restore();
+    }
+    // gångjärn i vertexen
+    ctx.fillStyle='#cdd0dc'; circle(0,0,T*0.34); ctx.fill();
+    ctx.fillStyle='rgba(41,0,62,.5)'; circle(0,0,T*0.16); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- HUD / overlays ----------
+  function updateHUD(){
+    document.getElementById('hudScore').textContent=score;
+    document.getElementById('hudLevel').textContent=level+"/"+LEVELS.length;
+    const lv=document.getElementById('hudLives'); lv.innerHTML='';
+    for(let i=0;i<lives;i++){ const d=document.createElement('div'); d.className='life'; lv.appendChild(d); }
+  }
+  function show(id){ document.getElementById(id).classList.remove('hidden'); }
+  function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+  const nameInput=document.getElementById('name');
+  const startBtn=document.getElementById('startBtn');
+  function begin(){ playerName=(nameInput.value||'').trim()||'Spelare'; audio(); startGame(); }
+  startBtn.addEventListener('click',begin);
+  nameInput.addEventListener('keydown',e=>{ if(e.key==='Enter') begin(); });
+  document.getElementById('againBtn').addEventListener('click',()=>{ hide('gameover'); show('menu'); state='menu'; });
+
+  loadLevel(1); updateHUD();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
