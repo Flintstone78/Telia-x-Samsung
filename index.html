@@ -46,15 +46,16 @@
   .lives{display:flex;gap:6px;}
   .life{width:14px;height:14px;border-radius:50%;background:var(--samsung-bright);box-shadow:0 0 8px var(--samsung-bright);}
   .stage{position:relative;width:100%;max-width:520px;flex:0 0 auto;padding:0 12px;display:flex;justify-content:center;}
-  canvas{display:block;width:auto;height:auto;border-radius:14px;
+  canvas{display:block;width:auto;height:auto;border-radius:14px;touch-action:none;
     box-shadow:0 0 0 1px rgba(153,10,227,.25),0 18px 60px -20px #000 inset, 0 12px 40px -16px rgba(153,10,227,.4);
     background:#150022;}
   /* on-screen controls */
-  .pad{width:100%;max-width:520px;display:flex;justify-content:center;padding:18px 0 8px;}
+  .pad{width:100%;max-width:520px;display:flex;justify-content:center;padding:18px 0 8px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
   .dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);gap:8px;}
   .dbtn{grid-column:auto;border:none;border-radius:14px;background:rgba(244,224,255,.07);
     color:var(--telia-light);font-size:22px;display:flex;align-items:center;justify-content:center;
-    backdrop-filter:blur(4px);border:1px solid rgba(244,224,255,.12);transition:transform .05s, background .12s;}
+    backdrop-filter:blur(4px);border:1px solid rgba(244,224,255,.12);transition:transform .05s, background .12s;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;cursor:pointer;}
   .dbtn:active{background:var(--telia-purple);color:#fff;transform:scale(.94);}
   .up{grid-column:2;grid-row:1;} .left{grid-column:1;grid-row:2;}
   .right{grid-column:3;grid-row:2;} .down{grid-column:2;grid-row:3;}
@@ -313,8 +314,9 @@
     ctx.setTransform(dpr,0,0,dpr,0,0);
     // visa i CSS-px så hela banan får plats både i bredd och höjd
     const stage = canvas.parentElement;
-    const availW = (stage.clientWidth||W) ;
-    const availH = Math.max(220, window.innerHeight*0.60);
+    const availW = (stage.clientWidth || Math.min(window.innerWidth,520) || W);
+    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    const availH = Math.max(220, vh*0.60);
     const scale = Math.min(availW/W, availH/H);
     canvas.style.width = Math.round(W*scale)+"px";
     canvas.style.height = Math.round(H*scale)+"px";
@@ -322,6 +324,7 @@
   fitCanvas();
   window.addEventListener('resize', ()=>{ if(MAZE) fitCanvas(); });
   window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ if(MAZE) fitCanvas(); },200); });
+  if(window.visualViewport){ window.visualViewport.addEventListener('resize', ()=>{ if(MAZE) fitCanvas(); }); }
 
   // ---------- SPRITES (Telia-pebble för power-pellets; spelaren ritas som linjer) ----------
   const SVG_PEBBLE = `<svg xmlns="http://www.w3.org/2000/svg" width="190.756" height="199" viewBox="0 0 190.756 199"><g transform="translate(-19)"><g transform="translate(19)"><path d="M670.267,772.956c25.982-14.992,49.359-40.331,56.772-58.44,2.071-14.991,2.539-16.849,2.806-33.366,0-2.255-.133-4.444-.334-6.567-1.536,24.212-32.995,54.659-74.673,74.493-50.293,24.013-87.963,30.447-104.8,12.139a137.457,137.457,0,0,0,16.231,25.538C585.71,803.867,626.519,798.163,670.267,772.956Z" transform="translate(-539.089 -633.125)" fill="#990ae3"/><path d="M646.871,723.838c47.422-22.686,80.417-55.057,74.673-76.417C712.126,631.169,692.957,625,672.453,625,611.672,625,537,664.8,537,715.611a67.778,67.778,0,0,0,4.074,21.426C554.967,755.346,597.312,747.584,646.871,723.838Z" transform="translate(-537 -625)" fill="#990ae3"/><path d="M651.017,817.6c-33.328,13.4-52.43,9.154-62.984.8l-.134-.133c16.365,16.185,34.932,27.528,51.229,27.528,28.587,0,67.727-34.427,86.228-87.825C714.937,777.266,692.562,800.947,651.017,817.6Z" transform="translate(-545.154 -646.788)" fill="#990ae3"/></g></g></svg>`;
@@ -426,6 +429,9 @@
     hide('menu'); hide('gameover');
     updateHUD();
     track('spel_start');
+    fitCanvas();
+    setTimeout(()=>{ if(MAZE) fitCanvas(); }, 200);   // när tangentbordet hunnit stängas
+    setTimeout(()=>{ if(MAZE) fitCanvas(); }, 550);
     freezeUntil=performance.now()+1200;
   }
   function nextLevel(){
@@ -487,12 +493,16 @@
     b.addEventListener('touchstart',fire,{passive:false});
     b.addEventListener('mousedown',fire);
   });
-  // swipe
+  // swipe: fungerar var som helst på skärmen under spel
   let tsx=0,tsy=0;
-  canvas.addEventListener('touchstart',e=>{const t=e.touches[0];tsx=t.clientX;tsy=t.clientY;},{passive:true});
-  canvas.addEventListener('touchend',e=>{
+  document.addEventListener('touchstart',e=>{
+    if(state!=='playing') return;
+    const t=e.touches[0]; tsx=t.clientX; tsy=t.clientY;
+  },{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(state!=='playing') return;
     const t=e.changedTouches[0]; const dx=t.clientX-tsx, dy=t.clientY-tsy;
-    if(Math.abs(dx)<18&&Math.abs(dy)<18) return;
+    if(Math.abs(dx)<24 && Math.abs(dy)<24) return;   // kort = troligen knapptryck, inte swipe
     if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?'right':'left'); else setDir(dy>0?'down':'up');
   },{passive:true});
 
@@ -739,7 +749,7 @@
 
   const nameInput=document.getElementById('name');
   const startBtn=document.getElementById('startBtn');
-  function begin(){ playerName=(nameInput.value||'').trim()||'Spelare'; audio(); startGame(); }
+  function begin(){ playerName=(nameInput.value||'').trim()||'Spelare'; nameInput.blur(); audio(); startGame(); }
   startBtn.addEventListener('click',begin);
   nameInput.addEventListener('keydown',e=>{ if(e.key==='Enter') begin(); });
   document.getElementById('againBtn').addEventListener('click',()=>{ hide('gameover'); show('menu'); state='menu'; });
