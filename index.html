@@ -27,7 +27,7 @@
     background:radial-gradient(120% 120% at 50% 0%,var(--bg1) 0%,var(--bg0) 70%,#0d0016 100%);
     color:var(--telia-light);
     display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-    min-height:100dvh;overflow:hidden;user-select:none;
+    height:100dvh;max-height:100dvh;overflow:hidden;user-select:none;
     padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
   .brandbar{
@@ -45,12 +45,12 @@
   .hud .val{font-family:'Press Start 2P';font-size:14px;color:#fff;}
   .lives{display:flex;gap:6px;}
   .life{width:14px;height:14px;border-radius:50%;background:var(--samsung-bright);box-shadow:0 0 8px var(--samsung-bright);}
-  .stage{position:relative;width:100%;max-width:520px;flex:0 0 auto;padding:0 12px;display:flex;justify-content:center;}
+  .stage{position:relative;width:100%;max-width:520px;flex:1 1 auto;min-height:0;padding:0 12px;display:flex;align-items:center;justify-content:center;}
   canvas{display:block;width:auto;height:auto;border-radius:14px;touch-action:none;
     box-shadow:0 0 0 1px rgba(153,10,227,.25),0 18px 60px -20px #000 inset, 0 12px 40px -16px rgba(153,10,227,.4);
     background:#150022;}
   /* on-screen controls */
-  .pad{width:100%;max-width:520px;display:flex;justify-content:center;padding:18px 0 8px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+  .pad{flex:0 0 auto;width:100%;max-width:520px;display:flex;justify-content:center;padding:12px 0 calc(8px + env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
   .dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);gap:8px;}
   .dbtn{grid-column:auto;border:none;border-radius:14px;background:rgba(244,224,255,.07);
     color:var(--telia-light);font-size:22px;display:flex;align-items:center;justify-content:center;
@@ -92,7 +92,9 @@
   .who{font-size:18px;font-weight:700;margin:18px 0 2px;color:var(--telia-light);}
   .note{font-size:12px;opacity:.5;max-width:300px;margin:22px auto 0;line-height:1.6;}
   .hint{font-size:12px;opacity:.55;margin-top:18px;}
-  @media (max-height:720px){ .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);} }
+  @media (max-height:800px){ .dpad{grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:7px;} }
+  @media (max-height:720px){ .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);gap:6px;} }
+  @media (max-height:640px){ .dpad{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:6px;} .pad{padding:8px 0 calc(6px + env(safe-area-inset-bottom));} }
 </style>
   <!-- Analytics: aktivera "Web Analytics" i Vercel-projektet. Sidvisningar spåras automatiskt.
        Spelet skickar dessutom custom-events: spel_start och spel_slut (poäng, nivå, pris). -->
@@ -315,8 +317,16 @@
     // visa i CSS-px så hela banan får plats både i bredd och höjd
     const stage = canvas.parentElement;
     const availW = (stage.clientWidth || Math.min(window.innerWidth,520) || W);
+    // Räkna ut höjden som FAKTISKT blir kvar till banan när brandbar, HUD och
+    // styrkorset tagit sin plats — annars trycks nedersta knappen utanför skärmen
+    // på t.ex. en Galaxy S23 och blir omöjlig att nå.
     const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-    const availH = Math.max(220, vh*0.60);
+    const h = el => (el ? el.getBoundingClientRect().height : 0);
+    const chromeH = h(document.querySelector('.brandbar'))
+                  + h(document.querySelector('.hud'))
+                  + h(document.querySelector('.pad'));
+    // liten marginal så inget tangerar kanterna
+    const availH = Math.max(180, vh - chromeH - 16);
     const scale = Math.min(availW/W, availH/H);
     canvas.style.width = Math.round(W*scale)+"px";
     canvas.style.height = Math.round(H*scale)+"px";
